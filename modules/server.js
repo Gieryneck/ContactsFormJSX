@@ -1,38 +1,56 @@
-
 var http = require('http');
-var colors = require('colors'); 
-var handlers = require('./handlers');
+var fs = require('fs');
+var path = require('path');
 
-function start() {
+http.createServer(function (request, response) {
+    console.log('request starting...');
 
-    function onRequest(request, response) {
+    var filePath = '.' + request.url;
+    if (filePath == './')
+        filePath = './index.html';
 
-        console.log('Odebrano zapytanie.'.green);
-
-        console.log('Zapytanie ' + request.url + ' odebrane.'); 
-
-        response.writeHead(200, 'Yo dawg, this is an optional status message, you feel me?', {'Content-Type': 'text/plain'});
-    
-        switch(true) {
-            
-            case /^\/(start)?$/.test(request.url):
-                handlers.welcome(request, response); 
-                break;
-            
-            case /^\/styles\/start\.css$/.test(request.url):
-                handlers.styles_start(request, response);
-                break;
-
-            default:
-                handlers.error(request, response);
-        }
+    var extname = path.extname(filePath);
+    var contentType = 'text/html';
+    switch (extname) {
+        case '.js':
+            contentType = 'text/babel';
+            break;
+        case '.css':
+            contentType = 'text/css';
+            break;
+        case '.json':
+            contentType = 'application/json';
+            break;
+        case '.png':
+            contentType = 'image/png';
+            break;      
+        case '.jpg':
+            contentType = 'image/jpg';
+            break;
+        case '.wav':
+            contentType = 'audio/wav';
+            break;
     }
 
-    http.createServer(onRequest).listen(8080); // tutaj nie dajemy parametrow, samo 'onRequest'
+    fs.readFile(filePath, function(error, content) {
+        if (error) {
+            if(error.code == 'ENOENT'){
+                fs.readFile('./404.html', function(error, content) {
+                    response.writeHead(200, { 'Content-Type': contentType });
+                    response.end(content, 'utf-8');
+                });
+            }
+            else {
+                response.writeHead(500);
+                response.end('Sorry, check with the site admin for error: '+error.code+' ..\n');
+                response.end(); 
+            }
+        }
+        else {
+            response.writeHead(200, { 'Content-Type': contentType });
+            response.end(content, 'utf-8');
+        }
+    });
 
-    
-
-    console.log('Uruchomiono serwer!'.green);
-}
-
-exports.start = start; // dodajemy do obiektu metodę export.start i przypisujemy jej fcję start
+}).listen(8125);
+console.log('Server running at http://127.0.0.1:8125/');
